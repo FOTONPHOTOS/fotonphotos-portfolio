@@ -116,7 +116,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
 
   const addLink = () => {
     if (newLink) {
-      setLocalLinks([...localLinks, newLink]);
+      setLocalLinks([newLink, ...localLinks]); // Add new to top
       setNewLink('');
     }
   };
@@ -131,6 +131,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      style={{ maxWidth: '1200px' }} // Wider for visual grid
     >
       <div className={styles.dashboardHeader}>
         <h2 className={styles.adminTitle}>Admin Portal</h2>
@@ -140,42 +141,75 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         </button>
       </div>
 
-      <div className={styles.inputGroup}>
+      <div className={styles.inputGroup} style={{ marginBottom: '5rem' }}>
         <input 
           type="text" 
           value={newLink} 
           onChange={(e) => setNewLink(e.target.value)} 
-          placeholder="Enter project link (IG, YT, FB)..."
+          placeholder="Paste IG, YouTube or FB link..."
           className={styles.input}
         />
         <button onClick={addLink} className={styles.addBtn}>
           <Plus size={16} style={{ marginRight: '8px' }} />
-          Add
+          Add Project
         </button>
       </div>
 
-      <div className={styles.linkList}>
+      <h3 style={{ fontFamily: 'Montserrat', fontSize: '0.8rem', letterSpacing: '0.3rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '2rem' }}>
+        Manage Live Portfolio
+      </h3>
+
+      <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
         <AnimatePresence>
-          {localLinks.map((link, index) => (
-            <motion.div 
-              key={index} 
-              className={styles.linkItem}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <span className={styles.linkUrl}>{link}</span>
-              <button onClick={() => removeLink(index)} className={styles.deleteBtn}>
-                <Trash2 size={14} />
-              </button>
-            </motion.div>
-          ))}
+          {localLinks.map((link, index) => {
+            const meta = parseVideoUrl(link);
+            return (
+              <motion.div 
+                key={index} 
+                className={styles.videoCard}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
+              >
+                <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
+                  {meta?.thumbnailUrl ? (
+                    <img src={meta.thumbnailUrl} className={styles.thumbnail} alt="" />
+                  ) : (
+                    <div className={styles.thumbnail} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111', color: '#444', fontSize: '0.6rem' }}>
+                      {meta?.platform.toUpperCase()} PREVIEW
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => removeLink(index)} 
+                    style={{ 
+                      position: 'absolute', top: '1rem', right: '1rem', 
+                      background: '#ff4444', border: 'none', borderRadius: '50%', 
+                      width: '30px', height: '30px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'white', z-index: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div style={{ padding: '1rem', fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {link}
+                </div>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
 
-      <div style={{ marginTop: '4rem', textAlign: 'right' }}>
-        <button onClick={() => onSave(localLinks)} className={styles.saveBtn}>Save Database</button>
+      <div style={{ marginTop: '6rem', paddingBottom: '10rem', textAlign: 'center' }}>
+        <button 
+          onClick={() => onSave(localLinks)} 
+          className={styles.saveBtn}
+          style={{ padding: '1.5rem 4rem', fontSize: '1rem' }}
+        >
+          Publish Changes
+        </button>
       </div>
     </motion.div>
   );
