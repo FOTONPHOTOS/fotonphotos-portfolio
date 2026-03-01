@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Trash2, Plus, LogOut } from 'lucide-react';
+import { Play, Trash2, Plus, LogOut, X } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
@@ -14,19 +14,16 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 interface VideoCardProps {
   url: string;
   index: number;
+  onOpenModal: (url: string) => void;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+const VideoCard: React.FC<VideoCardProps> = ({ url, index, onOpenModal }) => {
   const metadata = parseVideoUrl(url);
 
   if (!metadata) return null;
 
   const [width, height] = metadata.aspectRatio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
-
-  // For IG and FB, we show the embed immediately because they don't provide easy thumbnails
-  const showEmbedImmediately = metadata.platform === 'instagram' || metadata.platform === 'facebook';
 
   return (
     <motion.div 
@@ -35,60 +32,44 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, delay: index * 0.05, ease: [0.215, 0.61, 0.355, 1] }}
       whileHover={{ y: -10, transition: { duration: 0.3 } }}
-      onClick={() => setIsPlaying(true)}
+      onClick={() => onOpenModal(url)}
     >
       <div 
         className={styles.thumbnailWrapper} 
         style={{ paddingBottom: paddingBottom }}
       >
-        {(!isPlaying && !showEmbedImmediately) ? (
-          <>
-            <motion.div
-              initial={{ scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.8 }}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            >
-              {metadata.thumbnailUrl ? (
-                <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
-              ) : (
-                <div className={styles.thumbnail} style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  background: 'linear-gradient(45deg, #050505, #111)', 
-                  color: '#fff' 
-                }}>
-                  <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
-                    <Play size={40} fill="white" />
-                  </div>
-                  <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
-                    VIEW {metadata.platform.toUpperCase()} PROJECT
-                  </span>
-                </div>
-              )}
-            </motion.div>
-            
-            <div className={styles.playOverlay} style={{ opacity: 1 }}>
-              <Play size={20} fill="white" color="white" />
+        <motion.div
+          initial={{ scale: 1 }}
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.8 }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+        >
+          {metadata.thumbnailUrl ? (
+            <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
+          ) : (
+            <div className={styles.thumbnail} style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              background: 'linear-gradient(45deg, #050505, #111)', 
+              color: '#fff' 
+            }}>
+              <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
+                <Play size={40} fill="white" />
+              </div>
+              <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
+                VIEW {metadata.platform.toUpperCase()} PROJECT
+              </span>
             </div>
-            
-            <div className={styles.platformTag}>{metadata.platform}</div>
-          </>
-        ) : (
-          <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <iframe
-              src={metadata.embedUrl}
-              className={styles.iframe}
-              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              allowFullScreen
-              title={metadata.id}
-              scrolling="no"
-              style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%' }}
-            />
-          </div>
-        )}
+          )}
+        </motion.div>
+        
+        <div className={styles.playOverlay} style={{ opacity: 1 }}>
+          <Play size={20} fill="white" color="white" />
+        </div>
+        
+        <div className={styles.platformTag}>{metadata.platform}</div>
       </div>
     </motion.div>
   );
@@ -181,7 +162,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         <AnimatePresence>
           {localLinks.map((link, index) => {
             const meta = parseVideoUrl(link);
-            const showEmbedImmediately = meta?.platform === 'instagram' || meta?.platform === 'facebook';
+            const isYouTube = meta?.platform === 'youtube';
             
             return (
               <motion.div 
@@ -193,7 +174,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
                 style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
               >
                 <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
-                  {(!showEmbedImmediately && meta?.thumbnailUrl) ? (
+                  {(isYouTube && meta?.thumbnailUrl) ? (
                     <img src={meta.thumbnailUrl} className={styles.thumbnail} alt="" />
                   ) : (
                     <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -243,63 +224,78 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
 const App: React.FC = () => {
   const [links, setLinks] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLinks();
   }, []);
 
   const fetchLinks = async () => {
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('Supabase not configured');
-      return;
-    }
-    
+    if (!supabaseUrl || !supabaseKey) return;
     const { data, error } = await supabase
       .from('projects')
       .select('url')
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
     
-    if (error) {
-      console.error('Fetch error:', error.message);
-    } else if (data) {
-      setLinks(data.map(p => p.url));
-    }
+    if (data) setLinks(data.map(p => p.url));
+    if (error) console.error('Fetch error:', error.message);
   };
 
   const handleSave = async (updatedLinks: string[]) => {
     try {
-      // 1. Delete all existing records
-      const { error: deleteError } = await supabase
-        .from('projects')
-        .delete()
-        .neq('id', 0); // Delete everything
-
-      if (deleteError) throw deleteError;
-
-      // 2. Insert new records
+      await supabase.from('projects').delete().neq('id', 0);
       if (updatedLinks.length > 0) {
-        const { error: insertError } = await supabase
-          .from('projects')
-          .insert(updatedLinks.map(url => ({ url })));
-        
-        if (insertError) throw insertError;
+        await supabase.from('projects').insert(updatedLinks.map(url => ({ url })));
       }
-      
       setLinks(updatedLinks);
       setIsAdmin(false);
       alert('Portfolio Updated Successfully');
     } catch (err: any) {
-      console.error('Save error:', err.message);
       alert('Failed to save: ' + (err.message || 'Unknown Error'));
     }
   };
-
 
   return (
     <>
       <div className={styles.bgCanvas}>
         <div className={styles.noise} />
       </div>
+
+      <AnimatePresence>
+        {activeVideoUrl && (
+          <motion.div 
+            className={styles.modalOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setActiveVideoUrl(null)}
+          >
+            <motion.div 
+              className={styles.modalContent}
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ 
+                paddingBottom: parseVideoUrl(activeVideoUrl)?.aspectRatio === '9/16' ? 'min(80vh, 177%)' : '56.25%',
+                height: parseVideoUrl(activeVideoUrl)?.aspectRatio === '9/16' ? 'auto' : 0
+              }}
+            >
+              <button className={styles.closeBtn} onClick={() => setActiveVideoUrl(null)}>
+                <X size={24} />
+              </button>
+              <iframe
+                src={parseVideoUrl(activeVideoUrl)?.embedUrl}
+                className={styles.iframe}
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allowFullScreen
+                scrolling="no"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {isAdmin ? (
@@ -331,7 +327,7 @@ const App: React.FC = () => {
 
             <div className={styles.grid}>
               {links.map((link, index) => (
-                <VideoCard key={index} url={link} index={index} />
+                <VideoCard key={index} url={link} index={index} onOpenModal={setActiveVideoUrl} />
               ))}
             </div>
             
