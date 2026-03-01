@@ -143,12 +143,12 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
                 <Reorder.Item key={link} value={link} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem', padding: '0.5rem' }}>
                     <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
-                    <div style={{ width: '80px', height: '45px', background: '#000', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#000', borderRadius: '4px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                       {isYouTube ? (
-                        <img src={meta?.thumbnailUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
+                        <img src={meta?.thumbnailUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: 0.6 }} alt="" />
                       ) : (
                         <div style={{ width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
-                           <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(0.5)', transformOrigin: 'top left', opacity: 0.4 }} scrolling="no" />
+                           <iframe src={meta?.embedUrl} style={{ width: '200%', height: '200%', border: 'none', transform: 'scale(0.5)', transformOrigin: 'top left', opacity: 0.4 }} scrolling="no" />
                         </div>
                       )}
                     </div>
