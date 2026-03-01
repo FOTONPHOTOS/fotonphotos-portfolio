@@ -84,9 +84,43 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
   );
 };
 
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'fotonadmin';
+
 const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, onBack: () => void }> = ({ links, onSave, onBack }) => {
   const [localLinks, setLocalLinks] = useState<string[]>(links);
   const [newLink, setNewLink] = useState('');
+  const [password, setPassword] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  const handleUnlock = () => {
+    if (password === ADMIN_PASSWORD) {
+      setIsUnlocked(true);
+    } else {
+      alert('Unauthorized access.');
+    }
+  };
+
+  if (!isUnlocked) {
+    return (
+      <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div style={{ textAlign: 'center', paddingTop: '10vh' }}>
+          <h2 className={styles.adminTitle}>Security Required</h2>
+          <div className={styles.inputGroup} style={{ maxWidth: '400px', margin: '2rem auto' }}>
+            <input 
+              type="password" 
+              placeholder="Enter Admin Password" 
+              className={styles.input} 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+            />
+            <button onClick={handleUnlock} className={styles.addBtn}>Unlock</button>
+          </div>
+          <button onClick={onBack} className={styles.backBtn}>Cancel</button>
+        </div>
+      </motion.div>
+    );
+  }
 
   const addLink = () => {
     if (newLink) {
