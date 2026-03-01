@@ -39,13 +39,13 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
     if (host.includes('instagram.com')) {
       // Extract post ID - handle both /p/ and /reels/
       const parts = urlObj.pathname.split('/').filter(p => p);
-      // Find the ID (it's usually the one after 'p', 'reels', or 'reel')
       const idIndex = parts.findIndex(p => p === 'p' || p === 'reels' || p === 'reel');
-      const id = idIndex !== -1 ? parts[idIndex + 1] : parts[0];
+      const rawId = idIndex !== -1 ? parts[idIndex + 1] : parts[0];
+      
+      // Force strip any tracking junk like /?igsh=...
+      const id = rawId.split('?')[0].split('/')[0];
       
       const isReel = url.includes('/reels/') || url.includes('/reel/');
-      
-      // Use the 'reel' specific embed path if it's a reel, otherwise standard 'p'
       const embedPath = isReel ? 'reel' : 'p';
       
       return {

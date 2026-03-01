@@ -181,6 +181,8 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         <AnimatePresence>
           {localLinks.map((link, index) => {
             const meta = parseVideoUrl(link);
+            const showEmbedImmediately = meta?.platform === 'instagram' || meta?.platform === 'facebook';
+            
             return (
               <motion.div 
                 key={index} 
@@ -191,11 +193,16 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
                 style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
               >
                 <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
-                  {meta?.thumbnailUrl ? (
+                  {(!showEmbedImmediately && meta?.thumbnailUrl) ? (
                     <img src={meta.thumbnailUrl} className={styles.thumbnail} alt="" />
                   ) : (
-                    <div className={styles.thumbnail} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111', color: '#444', fontSize: '0.6rem' }}>
-                      {meta?.platform.toUpperCase()} PREVIEW
+                    <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                      <iframe
+                        src={meta?.embedUrl}
+                        className={styles.iframe}
+                        scrolling="no"
+                        style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%', pointerEvents: 'none' }}
+                      />
                     </div>
                   )}
                   <button 
