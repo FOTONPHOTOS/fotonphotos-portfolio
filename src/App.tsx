@@ -119,12 +119,12 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
             const isYouTube = meta?.platform === 'youtube';
             return (
               <div key={link + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
-                <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
+                <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177.77%' : '56.25%' }}>
                   {isYouTube ? (
                     <img src={meta?.thumbnailUrl} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
                   ) : (
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                      <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(0.8)', opacity: 0.4 }} scrolling="no" />
+                      <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(1)', opacity: 0.4 }} scrolling="no" />
                     </div>
                   )}
                   <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
