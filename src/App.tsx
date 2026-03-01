@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Trash2, Plus, LogOut, X } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
@@ -14,10 +14,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 interface VideoCardProps {
   url: string;
   index: number;
-  onOpenModal: (url: string) => void;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ url, index, onOpenModal }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
   const metadata = parseVideoUrl(url);
 
   if (!metadata) return null;
@@ -30,46 +30,43 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index, onOpenModal }) => {
       className={styles.videoCard}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.8, delay: index * 0.05, ease: [0.215, 0.61, 0.355, 1] }}
-      whileHover={{ y: -10, transition: { duration: 0.3 } }}
-      onClick={() => onOpenModal(url)}
+      transition={{ duration: 0.8, delay: index * 0.05 }}
+      whileHover={{ y: -10 }}
+      onClick={() => setIsPlaying(true)}
     >
-      <div 
-        className={styles.thumbnailWrapper} 
-        style={{ paddingBottom: paddingBottom }}
-      >
-        <motion.div
-          initial={{ scale: 1 }}
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.8 }}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-        >
-          {metadata.thumbnailUrl ? (
-            <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
-          ) : (
-            <div className={styles.thumbnail} style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              background: 'linear-gradient(45deg, #050505, #111)', 
-              color: '#fff' 
-            }}>
-              <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
-                <Play size={40} fill="white" />
-              </div>
-              <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
-                VIEW {metadata.platform.toUpperCase()} PROJECT
-              </span>
+      <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
+        {!isPlaying ? (
+          <>
+            <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+              {metadata.thumbnailUrl ? (
+                <img src={metadata.thumbnailUrl} alt="" className={styles.thumbnail} />
+              ) : (
+                <div className={styles.thumbnail} style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
+                }}>
+                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
+                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
+                </div>
+              )}
+            </motion.div>
+            <div className={styles.playOverlay} style={{ opacity: 1 }}>
+              <Play size={20} fill="white" color="white" />
             </div>
-          )}
-        </motion.div>
-        
-        <div className={styles.playOverlay} style={{ opacity: 1 }}>
-          <Play size={20} fill="white" color="white" />
-        </div>
-        
-        <div className={styles.platformTag}>{metadata.platform}</div>
+            <div className={styles.platformTag}>{metadata.platform}</div>
+          </>
+        ) : (
+          <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <iframe
+              src={metadata.embedUrl}
+              className={styles.iframe}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              scrolling="no"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -82,140 +79,82 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
   const [newLink, setNewLink] = useState('');
   const [password, setPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const handleUnlock = () => {
-    if (password === ADMIN_PASSWORD) {
-      setIsUnlocked(true);
-    } else {
-      alert('Unauthorized access.');
-    }
+    if (password === ADMIN_PASSWORD) setIsUnlocked(true);
+    else alert('Unauthorized access.');
   };
 
   if (!isUnlocked) {
     return (
-      <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className={styles.dashboardContainer}>
         <div style={{ textAlign: 'center', paddingTop: '10vh' }}>
           <h2 className={styles.adminTitle}>Security Required</h2>
           <div className={styles.inputGroup} style={{ maxWidth: '400px', margin: '2rem auto' }}>
-            <input 
-              type="password" 
-              placeholder="Enter Admin Password" 
-              className={styles.input} 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-            />
+            <input type="password" placeholder="Password" className={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} />
             <button onClick={handleUnlock} className={styles.addBtn}>Unlock</button>
           </div>
           <button onClick={onBack} className={styles.backBtn}>Cancel</button>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
-  const addLink = () => {
-    if (newLink) {
-      setLocalLinks([newLink, ...localLinks]); // Add new to top
-      setNewLink('');
-    }
-  };
-
-  const removeLink = (index: number) => {
-    setLocalLinks(localLinks.filter((_, i) => i !== index));
-  };
-
   return (
-    <motion.div 
-      className={styles.dashboardContainer}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      style={{ maxWidth: '1200px' }} // Wider for visual grid
-    >
+    <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1200px' }}>
       <div className={styles.dashboardHeader}>
         <h2 className={styles.adminTitle}>Admin Portal</h2>
-        <button onClick={onBack} className={styles.backBtn}>
-          <LogOut size={16} style={{ marginRight: '10px' }} />
-          Exit
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className={styles.backBtn}>
+            {viewMode === 'grid' ? <List size={16} /> : <LayoutGrid size={16} />}
+            <span style={{ marginLeft: '8px' }}>{viewMode === 'grid' ? 'List View' : 'Grid View'}</span>
+          </button>
+          <button onClick={onBack} className={styles.backBtn}><LogOut size={16} /></button>
+        </div>
       </div>
 
-      <div className={styles.inputGroup} style={{ marginBottom: '5rem' }}>
-        <input 
-          type="text" 
-          value={newLink} 
-          onChange={(e) => setNewLink(e.target.value)} 
-          placeholder="Paste IG, YouTube or FB link..."
-          className={styles.input}
-        />
-        <button onClick={addLink} className={styles.addBtn}>
-          <Plus size={16} style={{ marginRight: '8px' }} />
-          Add Project
-        </button>
+      <div className={styles.inputGroup} style={{ marginBottom: '4rem' }}>
+        <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="Paste link..." className={styles.input} />
+        <button onClick={() => { if(newLink) { setLocalLinks([newLink, ...localLinks]); setNewLink(''); }}} className={styles.addBtn}><Plus size={16} /> Add</button>
       </div>
 
-      <h3 style={{ fontFamily: 'Montserrat', fontSize: '0.8rem', letterSpacing: '0.3rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '2rem' }}>
-        Manage Live Portfolio
-      </h3>
-
-      <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        <AnimatePresence>
-          {localLinks.map((link, index) => {
+      {viewMode === 'grid' ? (
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+          {localLinks.map((link, i) => {
             const meta = parseVideoUrl(link);
-            const isYouTube = meta?.platform === 'youtube';
-            
             return (
-              <motion.div 
-                key={index} 
-                className={styles.videoCard}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
-              >
+              <div key={link + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
-                  {(isYouTube && meta?.thumbnailUrl) ? (
-                    <img src={meta.thumbnailUrl} className={styles.thumbnail} alt="" />
-                  ) : (
-                    <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                      <iframe
-                        src={meta?.embedUrl}
-                        className={styles.iframe}
-                        scrolling="no"
-                        style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%', pointerEvents: 'none' }}
-                      />
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => removeLink(index)} 
-                    style={{ 
-                      position: 'absolute', top: '1rem', right: '1rem', 
-                      background: '#ff4444', border: 'none', borderRadius: '50%', 
-                      width: '30px', height: '30px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <img src={meta?.thumbnailUrl || ''} className={styles.thumbnail} style={{ opacity: 0.3 }} alt="" />
+                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10 }}><Trash2 size={12} /></button>
                 </div>
-                <div style={{ padding: '1rem', fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {link}
-                </div>
-              </motion.div>
+              </div>
             );
           })}
-        </AnimatePresence>
-      </div>
+        </div>
+      ) : (
+        <Reorder.Group axis="y" values={localLinks} onReorder={setLocalLinks} className={styles.linkList}>
+          {localLinks.map((link, i) => {
+            const meta = parseVideoUrl(link);
+            return (
+              <Reorder.Item key={link} value={link} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem' }}>
+                  <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
+                  <div style={{ width: '80px', height: '45px', background: '#111', borderRadius: '4px', overflow: 'hidden' }}>
+                    <img src={meta?.thumbnailUrl || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{link}</span>
+                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444' }}><Trash2 size={14} /></button>
+                </div>
+              </Reorder.Item>
+            );
+          })}
+        </Reorder.Group>
+      )}
 
-      <div style={{ marginTop: '6rem', paddingBottom: '10rem', textAlign: 'center' }}>
-        <button 
-          onClick={() => onSave(localLinks)} 
-          className={styles.saveBtn}
-          style={{ padding: '1.5rem 4rem', fontSize: '1rem' }}
-        >
-          Publish Changes
-        </button>
+      <div style={{ marginTop: '4rem', textAlign: 'center' }}>
+        <button onClick={() => onSave(localLinks)} className={styles.saveBtn} style={{ padding: '1rem 3rem' }}>Save Arrangement</button>
       </div>
     </motion.div>
   );
@@ -224,120 +163,39 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
 const App: React.FC = () => {
   const [links, setLinks] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLinks();
-  }, []);
+  useEffect(() => { fetchLinks(); }, []);
 
   const fetchLinks = async () => {
     if (!supabaseUrl || !supabaseKey) return;
-    const { data, error } = await supabase
-      .from('projects')
-      .select('url')
-      .order('created_at', { ascending: false });
-    
+    const { data } = await supabase.from('projects').select('url').order('created_at', { ascending: false });
     if (data) setLinks(data.map(p => p.url));
-    if (error) console.error('Fetch error:', error.message);
   };
 
   const handleSave = async (updatedLinks: string[]) => {
     try {
       await supabase.from('projects').delete().neq('id', 0);
-      if (updatedLinks.length > 0) {
-        await supabase.from('projects').insert(updatedLinks.map(url => ({ url })));
-      }
+      if (updatedLinks.length > 0) await supabase.from('projects').insert(updatedLinks.map((url, i) => ({ url, created_at: new Date(Date.now() - i * 1000).toISOString() })));
       setLinks(updatedLinks);
       setIsAdmin(false);
-      alert('Portfolio Updated Successfully');
-    } catch (err: any) {
-      alert('Failed to save: ' + (err.message || 'Unknown Error'));
-    }
+      alert('Portfolio Updated');
+    } catch (err: any) { alert('Save error'); }
   };
 
   return (
     <>
-      <div className={styles.bgCanvas}>
-        <div className={styles.noise} />
-      </div>
-
-      <AnimatePresence>
-        {activeVideoUrl && (
-          <motion.div 
-            className={styles.modalOverlay}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setActiveVideoUrl(null)}
-          >
-            <motion.div 
-              className={styles.modalContent}
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{ 
-                paddingBottom: parseVideoUrl(activeVideoUrl)?.aspectRatio === '9/16' ? 'min(80vh, 177%)' : '56.25%',
-                height: parseVideoUrl(activeVideoUrl)?.aspectRatio === '9/16' ? 'auto' : 0
-              }}
-            >
-              <button className={styles.closeBtn} onClick={() => setActiveVideoUrl(null)}>
-                <X size={24} />
-              </button>
-              <iframe
-                src={parseVideoUrl(activeVideoUrl)?.embedUrl}
-                className={styles.iframe}
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                allowFullScreen
-                scrolling="no"
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+      <div className={styles.bgCanvas}><div className={styles.noise} /></div>
       <AnimatePresence mode="wait">
-        {isAdmin ? (
-          <Dashboard key="admin" links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} />
-        ) : (
-          <motion.div 
-            key="gallery"
-            className={styles.container}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.header 
-              className={styles.header}
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 1, ease: [0.19, 1, 0.22, 1] }}
-            >
-              <motion.img 
-                src="/logo.png" 
-                alt="FOTONPHOTOS" 
-                className={styles.logo} 
-                onDoubleClick={() => setIsAdmin(true)}
-                whileHover={{ scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              />
+        {isAdmin ? <Dashboard links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
+          <motion.div className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <header className={styles.header}>
+              <motion.img src="/logo.png" alt="FOTONPHOTOS" className={styles.logo} onDoubleClick={() => setIsAdmin(true)} whileHover={{ scale: 1.02 }} />
               <p className={styles.subtitle}>Cinematography & Photography</p>
-            </motion.header>
-
+            </header>
             <div className={styles.grid}>
-              {links.map((link, index) => (
-                <VideoCard key={index} url={link} index={index} onOpenModal={setActiveVideoUrl} />
-              ))}
+              {links.map((link, index) => <VideoCard key={link + index} url={link} index={index} />)}
             </div>
-            
-            <footer 
-              className={styles.footer} 
-              onClick={() => setIsAdmin(true)}
-              style={{ cursor: 'pointer' }}
-            >
-              © 2026 FOTONPHOTOS / BEYOND THE LENS
-            </footer>
+            <footer className={styles.footer} onClick={() => setIsAdmin(true)} style={{ cursor: 'pointer' }}>© 2026 FOTONPHOTOS / BEYOND THE LENS</footer>
           </motion.div>
         )}
       </AnimatePresence>
