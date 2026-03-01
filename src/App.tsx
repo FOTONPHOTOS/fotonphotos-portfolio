@@ -123,7 +123,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
                   {isYouTube ? (
                     <img src={meta?.thumbnailUrl} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
                   ) : (
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                    <div className={styles.iframeWrapper}>
                       <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(1)', opacity: 0.4 }} scrolling="no" />
                     </div>
                   )}

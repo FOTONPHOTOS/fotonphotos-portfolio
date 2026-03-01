@@ -38,23 +38,21 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
 
     // Instagram
     if (host.includes('instagram.com')) {
-      // Extract post ID - handle both /p/ and /reels/
       const parts = urlObj.pathname.split('/').filter(p => p);
       const idIndex = parts.findIndex(p => p === 'p' || p === 'reels' || p === 'reel');
       const rawId = idIndex !== -1 ? parts[idIndex + 1] : parts[0];
-      
-      // Force strip any tracking junk like /?igsh=...
       const id = rawId.split('?')[0].split('/')[0];
       
+      // Since this is a videography portfolio, we default IG to 9/16 
+      // unless it's a very specific old-style post.
       const isReel = url.includes('/reels/') || url.includes('/reel/');
-      const embedPath = isReel ? 'reel' : 'p';
       
       return {
         id,
         platform: 'instagram',
-        embedUrl: `https://www.instagram.com/${embedPath}/${id}/embed/`,
+        embedUrl: `https://www.instagram.com/reel/${id}/embed/`, // 'reel' path is more robust for videos
         thumbnailUrl: '', 
-        aspectRatio: isReel ? '9/16' : '1/1'
+        aspectRatio: '9/16' // Default to vertical for cinematic work
       };
     }
 
