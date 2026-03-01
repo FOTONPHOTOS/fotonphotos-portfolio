@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Trash2, X, Plus, LogOut } from 'lucide-react';
+import { Play, Trash2, Plus, LogOut } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
