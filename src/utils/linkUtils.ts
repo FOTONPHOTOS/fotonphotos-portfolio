@@ -37,16 +37,22 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
 
     // Instagram
     if (host.includes('instagram.com')) {
-      // Extract post ID
+      // Extract post ID - handle both /p/ and /reels/
       const parts = urlObj.pathname.split('/').filter(p => p);
-      const id = parts[1] || parts[0]; // e.g., /reels/ID/ or /p/ID/
+      // Find the ID (it's usually the one after 'p', 'reels', or 'reel')
+      const idIndex = parts.findIndex(p => p === 'p' || p === 'reels' || p === 'reel');
+      const id = idIndex !== -1 ? parts[idIndex + 1] : parts[0];
+      
       const isReel = url.includes('/reels/') || url.includes('/reel/');
+      
+      // Use the 'reel' specific embed path if it's a reel, otherwise standard 'p'
+      const embedPath = isReel ? 'reel' : 'p';
       
       return {
         id,
         platform: 'instagram',
-        embedUrl: `https://www.instagram.com/p/${id}/embed/`,
-        thumbnailUrl: '', // IG blocks direct thumb access without API
+        embedUrl: `https://www.instagram.com/${embedPath}/${id}/embed/`,
+        thumbnailUrl: '', 
         aspectRatio: isReel ? '9/16' : '1/1'
       };
     }
