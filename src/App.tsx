@@ -49,7 +49,25 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
               transition={{ duration: 0.8 }}
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
             >
-              <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
+              {metadata.thumbnailUrl ? (
+                <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
+              ) : (
+                <div className={styles.thumbnail} style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  background: 'linear-gradient(45deg, #050505, #111)', 
+                  color: '#fff' 
+                }}>
+                  <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
+                    <Play size={40} fill="white" />
+                  </div>
+                  <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
+                    VIEW {metadata.platform.toUpperCase()} PROJECT
+                  </span>
+                </div>
+              )}
             </motion.div>
             
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
@@ -187,7 +205,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
                       background: '#ff4444', border: 'none', borderRadius: '50%', 
                       width: '30px', height: '30px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', z-index: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                      color: 'white', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
                     }}
                   >
                     <Trash2 size={14} />
