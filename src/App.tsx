@@ -205,27 +205,48 @@ const App: React.FC = () => {
   }, []);
 
   const fetchLinks = async () => {
-    if (!supabaseUrl) return; // Exit if not configured
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase not configured');
+      return;
+    }
+    
     const { data, error } = await supabase
       .from('projects')
       .select('url')
-      .order('id', { ascending: true });
+      .order('created_at', { ascending: true });
     
-    if (data) setLinks(data.map(p => p.url));
-    if (error) console.error('Fetch error:', error);
+    if (error) {
+      console.error('Fetch error:', error.message);
+    } else if (data) {
+      setLinks(data.map(p => p.url));
+    }
   };
 
   const handleSave = async (updatedLinks: string[]) => {
     try {
-      // For simplicity, we delete all and re-insert (batch update)
-      await supabase.from('projects').delete().neq('id', 0);
-      const insertData = updatedLinks.map(url => ({ url }));
-      await supabase.from('projects').insert(insertData);
+      // 1. Delete all existing records
+      const { error: deleteError } = await supabase
+        .from('projects')
+        .delete()
+        .neq('id', 0); // Delete everything
+
+      if (deleteError) throw deleteError;
+
+      // 2. Insert new records
+      if (updatedLinks.length > 0) {
+        const { error: insertError } = await supabase
+          .from('projects')
+          .insert(updatedLinks.map(url => ({ url })));
+        
+        if (insertError) throw insertError;
+      }
       
       setLinks(updatedLinks);
       setIsAdmin(false);
-    } catch (err) {
-      alert('Failed to save changes');
+      alert('Portfolio Updated Successfully');
+    } catch (err: any) {
+      console.error('Save error:', err.message);
+      alert('Failed to save: ' + (err.message || 'Unknown Error'));
     }
   };
 
