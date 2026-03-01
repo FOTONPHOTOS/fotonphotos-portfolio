@@ -25,6 +25,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
   const [width, height] = metadata.aspectRatio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
+  // For IG and FB, we show the embed immediately as a "Live Thumbnail"
+  const isYouTube = metadata.platform === 'youtube';
+
   return (
     <motion.div 
       className={styles.videoCard}
@@ -35,20 +38,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
       onClick={() => setIsPlaying(true)}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {!isPlaying ? (
+        {(!isPlaying && isYouTube) ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-              {metadata.thumbnailUrl ? (
-                <img src={metadata.thumbnailUrl} alt="" className={styles.thumbnail} />
-              ) : (
-                <div className={styles.thumbnail} style={{ 
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
-                }}>
-                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
-                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
-                </div>
-              )}
+              <img src={metadata.thumbnailUrl} alt="" className={styles.thumbnail} />
             </motion.div>
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
@@ -108,7 +101,7 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className={styles.backBtn}>
             {viewMode === 'grid' ? <List size={16} /> : <LayoutGrid size={16} />}
-            <span style={{ marginLeft: '8px' }}>{viewMode === 'grid' ? 'List View' : 'Grid View'}</span>
+            <span style={{ marginLeft: '8px' }}>{viewMode === 'grid' ? 'Edit Order' : 'Back to Grid'}</span>
           </button>
           <button onClick={onBack} className={styles.backBtn}><LogOut size={16} /></button>
         </div>
@@ -123,38 +116,54 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
           {localLinks.map((link, i) => {
             const meta = parseVideoUrl(link);
+            const isYouTube = meta?.platform === 'youtube';
             return (
-              <div key={link + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div key={link + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
                 <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177%' : '56.25%' }}>
-                  <img src={meta?.thumbnailUrl || ''} className={styles.thumbnail} style={{ opacity: 0.3 }} alt="" />
-                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10 }}><Trash2 size={12} /></button>
+                  {isYouTube ? (
+                    <img src={meta?.thumbnailUrl} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
+                  ) : (
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                      <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(0.8)', opacity: 0.4 }} scrolling="no" />
+                    </div>
+                  )}
+                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <Reorder.Group axis="y" values={localLinks} onReorder={setLocalLinks} className={styles.linkList}>
-          {localLinks.map((link, i) => {
-            const meta = parseVideoUrl(link);
-            return (
-              <Reorder.Item key={link} value={link} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
-                <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem' }}>
-                  <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
-                  <div style={{ width: '80px', height: '45px', background: '#111', borderRadius: '4px', overflow: 'hidden' }}>
-                    <img src={meta?.thumbnailUrl || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
+        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <Reorder.Group axis="y" values={localLinks} onReorder={setLocalLinks} className={styles.linkList}>
+            {localLinks.map((link, i) => {
+              const meta = parseVideoUrl(link);
+              const isYouTube = meta?.platform === 'youtube';
+              return (
+                <Reorder.Item key={link} value={link} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem', padding: '0.5rem' }}>
+                    <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
+                    <div style={{ width: '80px', height: '45px', background: '#000', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                      {isYouTube ? (
+                        <img src={meta?.thumbnailUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
+                           <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(0.5)', transformOrigin: 'top left', opacity: 0.4 }} scrolling="no" />
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{link}</span>
+                    <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{link}</span>
-                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444' }}><Trash2 size={14} /></button>
-                </div>
-              </Reorder.Item>
-            );
-          })}
-        </Reorder.Group>
+                </Reorder.Item>
+              );
+            })}
+          </Reorder.Group>
+        </div>
       )}
 
-      <div style={{ marginTop: '4rem', textAlign: 'center' }}>
-        <button onClick={() => onSave(localLinks)} className={styles.saveBtn} style={{ padding: '1rem 3rem' }}>Save Arrangement</button>
+      <div style={{ marginTop: '4rem', textAlign: 'center', paddingBottom: '10rem' }}>
+        <button onClick={() => onSave(localLinks)} className={styles.saveBtn} style={{ padding: '1.2rem 4rem', fontSize: '1rem' }}>Save Final Arrangement</button>
       </div>
     </motion.div>
   );
@@ -175,10 +184,17 @@ const App: React.FC = () => {
   const handleSave = async (updatedLinks: string[]) => {
     try {
       await supabase.from('projects').delete().neq('id', 0);
-      if (updatedLinks.length > 0) await supabase.from('projects').insert(updatedLinks.map((url, i) => ({ url, created_at: new Date(Date.now() - i * 1000).toISOString() })));
+      if (updatedLinks.length > 0) {
+        // We use a descending timestamp to preserve the order in our query
+        const insertData = updatedLinks.map((url, i) => ({ 
+          url, 
+          created_at: new Date(Date.now() - i * 1000).toISOString() 
+        }));
+        await supabase.from('projects').insert(insertData);
+      }
       setLinks(updatedLinks);
       setIsAdmin(false);
-      alert('Portfolio Updated');
+      alert('Portfolio Arrangement Saved');
     } catch (err: any) { alert('Save error'); }
   };
 
@@ -186,8 +202,8 @@ const App: React.FC = () => {
     <>
       <div className={styles.bgCanvas}><div className={styles.noise} /></div>
       <AnimatePresence mode="wait">
-        {isAdmin ? <Dashboard links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
-          <motion.div className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        {isAdmin ? <Dashboard key="admin" links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
+          <motion.div key="gallery" className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <header className={styles.header}>
               <motion.img src="/logo.png" alt="FOTONPHOTOS" className={styles.logo} onDoubleClick={() => setIsAdmin(true)} whileHover={{ scale: 1.02 }} />
               <p className={styles.subtitle}>Cinematography & Photography</p>

@@ -30,7 +30,8 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
         id,
         platform: 'youtube',
         embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1`,
-        thumbnailUrl: `https://img.youtube.com/vi/${id}/maxresdefault.jpg`,
+        // Try maxres, but fallback to hqdefault in the component if needed
+        thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
         aspectRatio: isShort ? '9/16' : '16/9'
       };
     }
