@@ -25,6 +25,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
   const [width, height] = metadata.aspectRatio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
+  // For IG and FB, we show the embed immediately because they don't provide easy thumbnails
+  const showEmbedImmediately = metadata.platform === 'instagram' || metadata.platform === 'facebook';
+
   return (
     <motion.div 
       className={styles.videoCard}
@@ -38,7 +41,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
         className={styles.thumbnailWrapper} 
         style={{ paddingBottom: paddingBottom }}
       >
-        {!isPlaying ? (
+        {(!isPlaying && !showEmbedImmediately) ? (
           <>
             <motion.div
               initial={{ scale: 1 }}
@@ -46,25 +49,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
               transition={{ duration: 0.8 }}
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
             >
-              {metadata.thumbnailUrl ? (
-                <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
-              ) : (
-                <div className={styles.thumbnail} style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  background: 'linear-gradient(45deg, #050505, #111)', 
-                  color: '#fff' 
-                }}>
-                  <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
-                    <Play size={40} fill="white" />
-                  </div>
-                  <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
-                    VIEW {metadata.platform.toUpperCase()} PROJECT
-                  </span>
-                </div>
-              )}
+              <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
             </motion.div>
             
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
