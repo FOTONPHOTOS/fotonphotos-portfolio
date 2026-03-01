@@ -84,7 +84,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
   );
 };
 
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'fotonadmin';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
 const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, onBack: () => void }> = ({ links, onSave, onBack }) => {
   const [localLinks, setLocalLinks] = useState<string[]>(links);
