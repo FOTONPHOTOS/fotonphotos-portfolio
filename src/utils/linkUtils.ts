@@ -45,7 +45,6 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
       
       // Since this is a videography portfolio, we default IG to 9/16 
       // unless it's a very specific old-style post.
-      const isReel = url.includes('/reels/') || url.includes('/reel/');
       
       return {
         id,
