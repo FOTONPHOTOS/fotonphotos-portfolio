@@ -28,10 +28,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
   return (
     <motion.div 
       className={styles.videoCard}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: index * 0.1, ease: [0.215, 0.61, 0.355, 1] }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8, delay: index * 0.05, ease: [0.215, 0.61, 0.355, 1] }}
       whileHover={{ y: -10, transition: { duration: 0.3 } }}
       onClick={() => setIsPlaying(true)}
     >
@@ -50,19 +49,27 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
               {metadata.thumbnailUrl ? (
                 <img src={metadata.thumbnailUrl} alt="Video Thumbnail" className={styles.thumbnail} />
               ) : (
-                <div className={styles.thumbnail} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050505', color: '#333' }}>
-                  <span style={{ fontSize: '0.6rem', letterSpacing: '0.2rem' }}>PREVIEW</span>
+                <div className={styles.thumbnail} style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  background: 'linear-gradient(45deg, #050505, #111)', 
+                  color: '#fff' 
+                }}>
+                  <div style={{ opacity: 0.2, marginBottom: '1rem' }}>
+                    <Play size={40} fill="white" />
+                  </div>
+                  <span style={{ fontSize: '0.6rem', letterSpacing: '0.3rem', fontWeight: 300, opacity: 0.5 }}>
+                    VIEW {metadata.platform.toUpperCase()} PROJECT
+                  </span>
                 </div>
               )}
             </motion.div>
             
-            <motion.div 
-              className={styles.playOverlay}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ opacity: 1, scale: 1 }}
-            >
+            <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
-            </motion.div>
+            </div>
             
             <div className={styles.platformTag}>{metadata.platform}</div>
           </>
