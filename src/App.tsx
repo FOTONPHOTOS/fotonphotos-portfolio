@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List } from 'lucide-react';
+import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, Maximize, Minimize } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
@@ -11,22 +11,30 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface VideoCardProps {
+interface Project {
+  id?: number;
   url: string;
+  thumbnail_url?: string;
+  aspect_ratio: string;
+  created_at?: string;
+}
+
+interface VideoCardProps {
+  project: Project;
   index: number;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const metadata = parseVideoUrl(url);
+  const metadata = parseVideoUrl(project.url);
 
   if (!metadata) return null;
 
-  const [width, height] = metadata.aspectRatio.split('/').map(Number);
+  const [width, height] = project.aspect_ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
-  // For IG and FB, we show the embed immediately as a "Live Thumbnail"
   const isYouTube = metadata.platform === 'youtube';
+  const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
 
   return (
     <motion.div 
@@ -38,10 +46,20 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
       onClick={() => setIsPlaying(true)}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {(!isPlaying && isYouTube) ? (
+        {(!isPlaying && (displayThumbnail || isYouTube)) ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-              <img src={metadata.thumbnailUrl} alt="" className={styles.thumbnail} />
+              {displayThumbnail ? (
+                <img src={displayThumbnail} alt="" className={styles.thumbnail} />
+              ) : (
+                <div className={styles.thumbnail} style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
+                }}>
+                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
+                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
+                </div>
+              )}
             </motion.div>
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
@@ -67,9 +85,11 @@ const VideoCard: React.FC<VideoCardProps> = ({ url, index }) => {
 
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
-const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, onBack: () => void }> = ({ links, onSave, onBack }) => {
-  const [localLinks, setLocalLinks] = useState<string[]>(links);
-  const [newLink, setNewLink] = useState('');
+const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) => void, onBack: () => void }> = ({ projects, onSave, onBack }) => {
+  const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const [newUrl, setNewUrl] = useState('');
+  const [newThumb, setNewThumb] = useState('');
+  const [newRatio, setNewRatio] = useState('9/16');
   const [password, setPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -77,6 +97,19 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
   const handleUnlock = () => {
     if (password === ADMIN_PASSWORD) setIsUnlocked(true);
     else alert('Unauthorized access.');
+  };
+
+  const addProject = () => {
+    if (newUrl) {
+      const newProj: Project = { 
+        url: newUrl, 
+        thumbnail_url: newThumb, 
+        aspect_ratio: newRatio 
+      };
+      setLocalProjects([newProj, ...localProjects]);
+      setNewUrl('');
+      setNewThumb('');
+    }
   };
 
   if (!isUnlocked) {
@@ -107,27 +140,41 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         </div>
       </div>
 
-      <div className={styles.inputGroup} style={{ marginBottom: '4rem' }}>
-        <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="Paste link..." className={styles.input} />
-        <button onClick={() => { if(newLink) { setLocalLinks([newLink, ...localLinks]); setNewLink(''); }}} className={styles.addBtn}><Plus size={16} /> Add</button>
+      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '4rem' }}>
+        <div className={styles.inputGroup} style={{ marginBottom: '1rem' }}>
+          <input type="text" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="Video Link (IG, YT, FB, Drive)..." className={styles.input} />
+        </div>
+        <div className={styles.inputGroup} style={{ marginBottom: '1rem' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <ImageIcon size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+            <input type="text" value={newThumb} onChange={(e) => setNewThumb(e.target.value)} placeholder="Custom Thumbnail URL (Optional)" className={styles.input} style={{ paddingLeft: '3rem' }} />
+          </div>
+          <select value={newRatio} onChange={(e) => setNewRatio(e.target.value)} className={styles.input} style={{ flex: '0 0 150px', cursor: 'pointer' }}>
+            <option value="9/16">Portrait (9:16)</option>
+            <option value="16/9">Landscape (16:9)</option>
+            <option value="1/1">Square (1:1)</option>
+          </select>
+        </div>
+        <button onClick={addProject} className={styles.addBtn} style={{ width: '100%', marginTop: '1rem' }}><Plus size={16} style={{ marginRight: '8px' }} /> Add to Portfolio</button>
       </div>
 
       {viewMode === 'grid' ? (
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-          {localLinks.map((link, i) => {
-            const meta = parseVideoUrl(link);
-            const isYouTube = meta?.platform === 'youtube';
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+          {localProjects.map((proj, i) => {
+            const meta = parseVideoUrl(proj.url);
+            const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
             return (
-              <div key={link + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
-                <div className={styles.thumbnailWrapper} style={{ paddingBottom: meta?.aspectRatio === '9/16' ? '177.77%' : '56.25%' }}>
-                  {isYouTube ? (
-                    <img src={meta?.thumbnailUrl} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
+              <div key={proj.url + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
+                <div className={styles.thumbnailWrapper} style={{ paddingBottom: proj.aspect_ratio === '9/16' ? '177.77%' : '56.25%' }}>
+                  {thumb ? (
+                    <img src={thumb} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
                   ) : (
                     <div className={styles.iframeWrapper}>
                       <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(1)', opacity: 0.4 }} scrolling="no" />
                     </div>
                   )}
-                  <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
+                  <div className={styles.platformTag} style={{ top: '5px', left: '5px', right: 'auto' }}>{proj.aspect_ratio}</div>
+                  <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
                 </div>
               </div>
             );
@@ -135,25 +182,28 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
         </div>
       ) : (
         <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <Reorder.Group axis="y" values={localLinks} onReorder={setLocalLinks} className={styles.linkList}>
-            {localLinks.map((link, i) => {
-              const meta = parseVideoUrl(link);
-              const isYouTube = meta?.platform === 'youtube';
+          <Reorder.Group axis="y" values={localProjects} onReorder={setLocalProjects} className={styles.linkList}>
+            {localProjects.map((proj, i) => {
+              const meta = parseVideoUrl(proj.url);
+              const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
               return (
-                <Reorder.Item key={link} value={link} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
+                <Reorder.Item key={proj.url + i} value={proj} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem', padding: '0.5rem' }}>
                     <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
-                    <div style={{ width: '80px', height: '80px', background: '#000', borderRadius: '4px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                      {isYouTube ? (
-                        <img src={meta?.thumbnailUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: 0.6 }} alt="" />
+                    <div style={{ width: '60px', height: '60px', background: '#000', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                      {thumb ? (
+                        <img src={thumb} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
                       ) : (
                         <div style={{ width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
                            <iframe src={meta?.embedUrl} style={{ width: '200%', height: '200%', border: 'none', transform: 'scale(0.5)', transformOrigin: 'top left', opacity: 0.4 }} scrolling="no" />
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{link}</span>
-                    <button onClick={() => setLocalLinks(localLinks.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proj.url}</div>
+                      <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio}</div>
+                    </div>
+                    <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
                 </Reorder.Item>
               );
@@ -163,41 +213,39 @@ const Dashboard: React.FC<{ links: string[], onSave: (links: string[]) => void, 
       )}
 
       <div style={{ marginTop: '4rem', textAlign: 'center', paddingBottom: '10rem' }}>
-        <button onClick={() => onSave(localLinks)} className={styles.saveBtn} style={{ padding: '1.2rem 4rem', fontSize: '1rem' }}>Save Final Arrangement</button>
+        <button onClick={() => onSave(localProjects)} className={styles.saveBtn} style={{ padding: '1.2rem 4rem', fontSize: '1rem' }}>Save Portfolio Configuration</button>
       </div>
     </motion.div>
   );
 };
 
 const App: React.FC = () => {
-  const [links, setLinks] = useState<string[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => { fetchLinks(); }, []);
 
   const fetchLinks = async () => {
     if (!supabaseUrl || !supabaseKey) return;
-    const { data } = await supabase.from('projects').select('url').order('created_at', { ascending: false });
-    if (data) setLinks(data.map(p => p.url));
+    const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    if (data) setProjects(data);
   };
 
-  const handleSave = async (updatedLinks: string[]) => {
+  const handleSave = async (updatedProjects: Project[]) => {
     try {
-      // 1. Remove any potential duplicates before saving
-      const uniqueLinks = Array.from(new Set(updatedLinks));
-      
       await supabase.from('projects').delete().neq('id', 0);
-      if (uniqueLinks.length > 0) {
-        // We use a descending timestamp to preserve the order in our query
-        const insertData = uniqueLinks.map((url, i) => ({ 
-          url, 
+      if (updatedProjects.length > 0) {
+        const insertData = updatedProjects.map((p, i) => ({ 
+          url: p.url,
+          thumbnail_url: p.thumbnail_url,
+          aspect_ratio: p.aspect_ratio,
           created_at: new Date(Date.now() - i * 1000).toISOString() 
         }));
         await supabase.from('projects').insert(insertData);
       }
-      setLinks(uniqueLinks);
+      setProjects(updatedProjects);
       setIsAdmin(false);
-      alert('Portfolio Arrangement Saved');
+      alert('Portfolio Updated Successfully');
     } catch (err: any) { alert('Save error'); }
   };
 
@@ -205,7 +253,7 @@ const App: React.FC = () => {
     <>
       <div className={styles.bgCanvas}><div className={styles.noise} /></div>
       <AnimatePresence mode="wait">
-        {isAdmin ? <Dashboard key="admin" links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
+        {isAdmin ? <Dashboard projects={projects} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
           <motion.div key="gallery" className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.header 
               className={styles.header}
@@ -221,9 +269,7 @@ const App: React.FC = () => {
                 onDoubleClick={() => setIsAdmin(true)}
                 initial={{ y: 20, opacity: 0, scale: 0.9 }}
                 animate={{ 
-                  y: 0, 
-                  opacity: 1, 
-                  scale: 1,
+                  y: 0, opacity: 1, scale: 1,
                   filter: [
                     'drop-shadow(0 0 10px rgba(255,255,255,0.1))',
                     'drop-shadow(0 0 20px rgba(255,255,255,0.2))',
@@ -231,27 +277,16 @@ const App: React.FC = () => {
                   ]
                 }}
                 transition={{ 
-                  duration: 1.2, 
-                  ease: [0.19, 1, 0.22, 1],
-                  filter: {
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }
+                  duration: 1.2, filter: { duration: 4, repeat: Infinity, ease: "easeInOut" }
                 }}
                 whileHover={{ scale: 1.05 }}
               />
-              <motion.p 
-                className={styles.subtitle}
-                initial={{ opacity: 0, letterSpacing: '0.4rem' }}
-                animate={{ opacity: 1, letterSpacing: '0.8rem' }}
-                transition={{ duration: 2, delay: 0.5 }}
-              >
+              <motion.p className={styles.subtitle} initial={{ opacity: 0, letterSpacing: '0.4rem' }} animate={{ opacity: 1, letterSpacing: '0.8rem' }} transition={{ duration: 2, delay: 0.5 }}>
                 Cinematography & Photography
               </motion.p>
             </motion.header>
             <div className={styles.grid}>
-              {links.map((link, index) => <VideoCard key={link + index} url={link} index={index} />)}
+              {projects.map((proj, index) => <VideoCard key={proj.url + index} project={proj} index={index} />)}
             </div>
             <footer className={styles.footer} onClick={() => setIsAdmin(true)} style={{ cursor: 'pointer' }}>© 2026 FOTONPHOTOS / BEYOND THE LENS</footer>
           </motion.div>
