@@ -30,7 +30,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
 
   if (!metadata) return null;
 
-  const [width, height] = project.aspect_ratio.split('/').map(Number);
+  const ratio = project.aspect_ratio || '9/16';
+  const [width, height] = ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
   const isYouTube = metadata.platform === 'youtube';
@@ -159,13 +160,13 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
       </div>
 
       {viewMode === 'grid' ? (
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
           {localProjects.map((proj, i) => {
             const meta = parseVideoUrl(proj.url);
             const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
             return (
               <div key={proj.url + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
-                <div className={styles.thumbnailWrapper} style={{ paddingBottom: proj.aspect_ratio === '9/16' ? '177.77%' : '56.25%' }}>
+                <div className={styles.thumbnailWrapper} style={{ paddingBottom: (proj.aspect_ratio || '9/16') === '9/16' ? '177.77%' : '56.25%' }}>
                   {thumb ? (
                     <img src={thumb} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
                   ) : (
@@ -173,7 +174,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(1)', opacity: 0.4 }} scrolling="no" />
                     </div>
                   )}
-                  <div className={styles.platformTag} style={{ top: '5px', left: '5px', right: 'auto' }}>{proj.aspect_ratio}</div>
+                  <div className={styles.platformTag} style={{ top: '5px', left: '5px', right: 'auto' }}>{proj.aspect_ratio || '9/16'}</div>
                   <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
                 </div>
               </div>
@@ -201,7 +202,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proj.url}</div>
-                      <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio}</div>
+                      <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio || '9/16'}</div>
                     </div>
                     <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
@@ -227,26 +228,30 @@ const App: React.FC = () => {
 
   const fetchLinks = async () => {
     if (!supabaseUrl || !supabaseKey) return;
-    const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    if (error) console.error('Fetch error:', error.message);
     if (data) setProjects(data);
   };
 
   const handleSave = async (updatedProjects: Project[]) => {
     try {
+      const uniqueProjects = Array.from(new Set(updatedProjects.map(p => p.url)))
+        .map(url => updatedProjects.find(p => p.url === url)!);
+
       await supabase.from('projects').delete().neq('id', 0);
-      if (updatedProjects.length > 0) {
-        const insertData = updatedProjects.map((p, i) => ({ 
+      if (uniqueProjects.length > 0) {
+        const insertData = uniqueProjects.map((p, i) => ({ 
           url: p.url,
           thumbnail_url: p.thumbnail_url,
-          aspect_ratio: p.aspect_ratio,
+          aspect_ratio: p.aspect_ratio || '9/16',
           created_at: new Date(Date.now() - i * 1000).toISOString() 
         }));
         await supabase.from('projects').insert(insertData);
       }
-      setProjects(updatedProjects);
+      setProjects(uniqueProjects);
       setIsAdmin(false);
       alert('Portfolio Updated Successfully');
-    } catch (err: any) { alert('Save error'); }
+    } catch (err: any) { alert('Save error: ' + err.message); }
   };
 
   return (
