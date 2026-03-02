@@ -183,16 +183,19 @@ const App: React.FC = () => {
 
   const handleSave = async (updatedLinks: string[]) => {
     try {
+      // 1. Remove any potential duplicates before saving
+      const uniqueLinks = Array.from(new Set(updatedLinks));
+      
       await supabase.from('projects').delete().neq('id', 0);
-      if (updatedLinks.length > 0) {
+      if (uniqueLinks.length > 0) {
         // We use a descending timestamp to preserve the order in our query
-        const insertData = updatedLinks.map((url, i) => ({ 
+        const insertData = uniqueLinks.map((url, i) => ({ 
           url, 
           created_at: new Date(Date.now() - i * 1000).toISOString() 
         }));
         await supabase.from('projects').insert(insertData);
       }
-      setLinks(updatedLinks);
+      setLinks(uniqueLinks);
       setIsAdmin(false);
       alert('Portfolio Arrangement Saved');
     } catch (err: any) { alert('Save error'); }
