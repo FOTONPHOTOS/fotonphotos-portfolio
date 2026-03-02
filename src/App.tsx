@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, MoreVertical, Edit2, Copy, Check, X, Upload } from 'lucide-react';
 import styles from './App.module.css';
@@ -27,7 +27,6 @@ interface VideoCardProps {
 const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const metadata = parseVideoUrl(project.url);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   if (!metadata) return null;
 
@@ -35,20 +34,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [width, height] = ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
+  const isYouTube = metadata.platform === 'youtube';
   const isDrive = project.url.includes('drive.google.com');
-  const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
+  const displayThumbnail = project.thumbnail_url || (isYouTube ? metadata.thumbnailUrl : null);
 
-  // For IG and FB, we show the embed immediately as a "Live Thumbnail"
-  const showEmbedImmediately = metadata.platform === 'instagram' || metadata.platform === 'facebook';
-
-  const driveDirectUrl = isDrive ? `https://drive.google.com/uc?export=download&id=${metadata.id}` : '';
-
-  const handlePlay = () => {
-    setIsPlaying(true);
-    if (isDrive && videoRef.current) {
-      videoRef.current.play();
-    }
-  };
+  // Show embed immediately if no thumbnail exists (matches Admin Dashboard UX)
+  const showEmbedImmediately = !displayThumbnail;
 
   return (
     <motion.div 
@@ -57,23 +48,13 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, delay: index * 0.05 }}
       whileHover={{ y: -10 }}
-      onClick={handlePlay}
+      onClick={() => setIsPlaying(true)}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
         {(!isPlaying && !showEmbedImmediately) ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-              {displayThumbnail ? (
-                <img src={displayThumbnail} alt="" className={styles.thumbnail} />
-              ) : (
-                <div className={styles.thumbnail} style={{ 
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
-                }}>
-                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
-                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
-                </div>
-              )}
+              <img src={displayThumbnail!} alt="" className={styles.thumbnail} />
             </motion.div>
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
@@ -82,26 +63,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
           </>
         ) : (
           <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {isDrive ? (
-              <video 
-                ref={videoRef}
-                src={driveDirectUrl}
-                controls
-                autoPlay
-                className={styles.iframe}
-                style={{ objectFit: 'contain', background: '#000' }}
-                poster={displayThumbnail}
-              />
-            ) : (
-              <iframe
-                src={metadata.embedUrl + (isPlaying ? "?autoplay=1" : "")}
-                className={styles.iframe}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                scrolling="no"
-                style={{ width: '100%', height: '100%', border: 'none' }}
-              />
-            )}
+            <iframe
+              src={metadata.embedUrl + (isPlaying ? "?autoplay=1" : "")}
+              className={styles.iframe}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              scrolling="no"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
           </div>
         )}
       </div>
