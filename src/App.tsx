@@ -35,8 +35,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [width, height] = ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
+  const isYouTube = metadata.platform === 'youtube';
   const isDrive = project.url.includes('drive.google.com');
   const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
+
+  // For IG and FB, we show the embed immediately as a "Live Thumbnail"
+  const showEmbedImmediately = metadata.platform === 'instagram' || metadata.platform === 'facebook';
 
   const driveDirectUrl = isDrive ? `https://drive.google.com/uc?export=download&id=${metadata.id}` : '';
 
@@ -57,7 +61,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
       onClick={handlePlay}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {!isPlaying ? (
+        {(!isPlaying && !showEmbedImmediately) ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
               {displayThumbnail ? (
@@ -91,7 +95,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
               />
             ) : (
               <iframe
-                src={metadata.embedUrl}
+                src={metadata.embedUrl + (isPlaying ? "?autoplay=1" : "")}
                 className={styles.iframe}
                 allow="autoplay; encrypted-media"
                 allowFullScreen
@@ -236,10 +240,11 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
           {localProjects.map((proj, i) => {
             const meta = parseVideoUrl(proj.url);
             const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
+            const isYouTube = meta?.platform === 'youtube';
             return (
               <div key={proj.url + i} className={styles.videoCard} style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#050505' }}>
                 <div className={styles.thumbnailWrapper} style={{ paddingBottom: (proj.aspect_ratio || '9/16') === '9/16' ? '177.77%' : '56.25%' }}>
-                  {thumb ? (
+                  {(thumb && isYouTube) ? (
                     <img src={thumb} className={styles.thumbnail} style={{ opacity: 0.5 }} alt="" />
                   ) : (
                     <div className={styles.iframeWrapper}>
@@ -270,12 +275,13 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
             {localProjects.map((proj, i) => {
               const meta = parseVideoUrl(proj.url);
               const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
+              const isYouTube = meta?.platform === 'youtube';
               return (
                 <Reorder.Item key={proj.url + i} value={proj} className={styles.linkItem} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', cursor: 'grab' }}>
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '1.5rem', padding: '0.5rem' }}>
                     <GripVertical size={16} style={{ color: 'rgba(255,255,255,0.2)' }} />
                     <div style={{ width: '60px', height: '60px', background: '#000', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
-                      {thumb ? (
+                      {(thumb && isYouTube) ? (
                         <img src={thumb} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt="" />
                       ) : (
                         <div style={{ width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}>
