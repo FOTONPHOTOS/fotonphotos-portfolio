@@ -58,20 +58,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
       onClick={handlePlay}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {!isPlaying ? (
+        {(!isPlaying && displayThumbnail) ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-              {displayThumbnail ? (
-                <img src={displayThumbnail} alt="" className={styles.thumbnail} />
-              ) : (
-                <div className={styles.thumbnail} style={{ 
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
-                }}>
-                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
-                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
-                </div>
-              )}
+              <img src={displayThumbnail} alt="" className={styles.thumbnail} />
             </motion.div>
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
