@@ -68,9 +68,17 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
 
     // Google Drive
     if (host.includes('drive.google.com')) {
-      const parts = urlObj.pathname.split('/');
+      const parts = urlObj.pathname.split('/').filter(p => p);
       const dIndex = parts.indexOf('d');
-      const id = dIndex !== -1 ? parts[dIndex + 1] : urlObj.searchParams.get('id') || '';
+      let id = '';
+      if (dIndex !== -1 && parts[dIndex + 1]) {
+        id = parts[dIndex + 1];
+      } else {
+        id = urlObj.searchParams.get('id') || '';
+      }
+      
+      // Clean the ID
+      id = id.split('?')[0].split('&')[0];
       
       return {
         id,
