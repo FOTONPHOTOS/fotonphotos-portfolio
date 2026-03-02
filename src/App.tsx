@@ -35,7 +35,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [width, height] = ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
-  const isYouTube = metadata.platform === 'youtube';
   const isDrive = project.url.includes('drive.google.com');
   const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
 
