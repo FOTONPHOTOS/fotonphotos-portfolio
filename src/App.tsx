@@ -315,7 +315,7 @@ const App: React.FC = () => {
       console.warn('Supabase not configured');
       return;
     }
-    const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('portfolio_projects').select('*').order('created_at', { ascending: false });
     if (error) console.error('Fetch error:', error.message);
     if (data) setProjects(data);
   };
@@ -326,7 +326,7 @@ const App: React.FC = () => {
       const uniqueProjects = Array.from(new Set(updatedProjects.map(p => p.url)))
         .map(url => updatedProjects.find(p => p.url === url)!);
 
-      await supabase.from('projects').delete().neq('id', 0);
+      await supabase.from('portfolio_projects').delete().neq('id', 0);
       if (uniqueProjects.length > 0) {
         const insertData = uniqueProjects.map((p, i) => ({ 
           url: p.url,
@@ -334,7 +334,7 @@ const App: React.FC = () => {
           aspect_ratio: p.aspect_ratio || '9/16',
           created_at: new Date(Date.now() - i * 1000).toISOString() 
         }));
-        await supabase.from('projects').insert(insertData);
+        await supabase.from('portfolio_projects').insert(insertData);
       }
       setProjects(uniqueProjects);
       setIsAdmin(false);
