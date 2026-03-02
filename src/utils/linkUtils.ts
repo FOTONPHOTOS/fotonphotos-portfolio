@@ -74,7 +74,7 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
       
       return {
         id,
-        platform: 'unknown',
+        platform: 'unknown', // Using 'unknown' to trigger the native video player in App.tsx
         embedUrl: `https://drive.google.com/file/d/${id}/preview`,
         thumbnailUrl: '',
         aspectRatio: '16/9'

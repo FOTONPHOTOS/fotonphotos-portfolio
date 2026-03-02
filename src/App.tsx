@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, MoreVertical, Edit2, Copy, Check, X, Upload } from 'lucide-react';
 import styles from './App.module.css';
@@ -27,6 +27,7 @@ interface VideoCardProps {
 const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const metadata = parseVideoUrl(project.url);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   if (!metadata) return null;
 
@@ -35,7 +36,18 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const paddingBottom = (height / width) * 100 + '%';
 
   const isYouTube = metadata.platform === 'youtube';
+  const isDrive = project.url.includes('drive.google.com');
   const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
+
+  // Direct link for Google Drive streaming (avoids the 3-click preview)
+  const driveDirectUrl = isDrive ? `https://drive.google.com/uc?export=download&id=${metadata.id}` : '';
+
+  const handlePlay = () => {
+    setIsPlaying(true);
+    if (isDrive && videoRef.current) {
+      videoRef.current.play();
+    }
+  };
 
   return (
     <motion.div 
@@ -44,10 +56,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, delay: index * 0.05 }}
       whileHover={{ y: -10 }}
-      onClick={() => setIsPlaying(true)}
+      onClick={handlePlay}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {(!isPlaying && (displayThumbnail || isYouTube)) ? (
+        {!isPlaying ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
               {displayThumbnail ? (
@@ -65,18 +77,30 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
             </div>
-            <div className={styles.platformTag}>{metadata.platform}</div>
+            <div className={styles.platformTag}>{isDrive ? 'DRIVE' : metadata.platform}</div>
           </>
         ) : (
           <div className={styles.iframeWrapper} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <iframe
-              src={metadata.embedUrl}
-              className={styles.iframe}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              scrolling="no"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            {isDrive ? (
+              <video 
+                ref={videoRef}
+                src={driveDirectUrl}
+                controls
+                autoPlay
+                className={styles.iframe}
+                style={{ objectFit: 'contain', background: '#000' }}
+                poster={displayThumbnail}
+              />
+            ) : (
+              <iframe
+                src={metadata.embedUrl}
+                className={styles.iframe}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                scrolling="no"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            )}
           </div>
         )}
       </div>
@@ -107,23 +131,17 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
     try {
       const file = e.target.files?.[0];
       if (!file) return;
-
       setUploading(true);
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `thumbnails/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('portfolio')
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, file);
       if (uploadError) throw uploadError;
-
       const { data } = supabase.storage.from('portfolio').getPublicUrl(filePath);
       setNewThumb(data.publicUrl);
       alert('Thumbnail Uploaded Successfully');
     } catch (err: any) {
-      alert('Upload failed: ' + err.message + ' (Make sure you created a public bucket named "portfolio" in Supabase Storage)');
+      alert('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
     }
@@ -131,14 +149,9 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
 
   const addProject = () => {
     if (newUrl) {
-      const newProj: Project = { 
-        url: newUrl, 
-        thumbnail_url: newThumb, 
-        aspect_ratio: newRatio 
-      };
+      const newProj: Project = { url: newUrl, thumbnail_url: newThumb, aspect_ratio: newRatio };
       setLocalProjects([newProj, ...localProjects]);
-      setNewUrl('');
-      setNewThumb('');
+      setNewUrl(''); setNewThumb('');
     }
   };
 
@@ -146,7 +159,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
     const proj = localProjects[index];
     setNewUrl(proj.url);
     setNewThumb(proj.thumbnail_url || '');
-    setNewRatio(proj.aspect_ratio);
+    setNewRatio(proj.aspect_ratio || '9/16');
     setEditingIndex(index);
     setEditingMenu(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -155,46 +168,12 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   const updateProject = () => {
     if (editingIndex !== null) {
       const updated = [...localProjects];
-      updated[editingIndex] = {
-        ...updated[editingIndex],
-        url: newUrl,
-        thumbnail_url: newThumb,
-        aspect_ratio: newRatio
-      };
+      updated[editingIndex] = { ...updated[editingIndex], url: newUrl, thumbnail_url: newThumb, aspect_ratio: newRatio };
       setLocalProjects(updated);
       setEditingIndex(null);
-      setNewUrl('');
-      setNewThumb('');
+      setNewUrl(''); setNewThumb('');
     }
   };
-
-  const deleteProject = (index: number) => {
-    if (window.confirm('Security Check: Are you sure you want to delete this project?')) {
-      setLocalProjects(localProjects.filter((_, i) => i !== index));
-      setEditingMenu(null);
-    }
-  };
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    alert('Link Copied');
-    setEditingMenu(null);
-  };
-
-  if (!isUnlocked) {
-    return (
-      <div className={styles.dashboardContainer}>
-        <div style={{ textAlign: 'center', paddingTop: '10vh' }}>
-          <h2 className={styles.adminTitle}>Security Required</h2>
-          <div className={styles.inputGroup} style={{ maxWidth: '400px', margin: '2rem auto' }}>
-            <input type="password" placeholder="Password" className={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} />
-            <button onClick={handleUnlock} className={styles.addBtn}>Unlock</button>
-          </div>
-          <button onClick={onBack} className={styles.backBtn}>Cancel</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1200px' }}>
@@ -218,13 +197,10 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
             <ImageIcon size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
             <input type="text" value={newThumb} onChange={(e) => setNewThumb(e.target.value)} placeholder="Thumbnail URL" className={styles.input} style={{ paddingLeft: '3rem' }} />
           </div>
-          <div style={{ position: 'relative' }}>
-            <label className={styles.addBtn} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-              <Upload size={16} />
-              {uploading ? '...' : 'Upload'}
-              <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
-            </label>
-          </div>
+          <label className={styles.addBtn} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+            <Upload size={16} /> {uploading ? '...' : 'Upload'}
+            <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
+          </label>
           <select value={newRatio} onChange={(e) => setNewRatio(e.target.value)} className={styles.input} style={{ flex: '0 0 150px', cursor: 'pointer' }}>
             <option value="9/16">Portrait (9:16)</option>
             <option value="16/9">Landscape (16:9)</option>
@@ -262,8 +238,8 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       {activeMenu === i && (
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ position: 'absolute', top: '35px', right: 0, background: '#111', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden', minWidth: '120px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
                           <button onClick={() => handleEdit(i)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Edit2 size={12} /> Edit</button>
-                          <button onClick={() => copyToClipboard(proj.url)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Copy size={12} /> Copy Link</button>
-                          <button onClick={() => deleteProject(i)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ff4444', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
+                          <button onClick={() => { navigator.clipboard.writeText(proj.url); alert('Copied'); setEditingMenu(null); }} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Copy size={12} /> Copy Link</button>
+                          <button onClick={() => { if(window.confirm('Delete?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); setEditingMenu(null); }} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ff4444', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -298,7 +274,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio || '9/16'}</div>
                     </div>
                     <button onClick={() => handleEdit(i)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><Edit2 size={14} /></button>
-                    <button onClick={() => deleteProject(i)} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <button onClick={() => { if(window.confirm('Delete?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); }} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
                 </Reorder.Item>
               );
@@ -352,7 +328,9 @@ const App: React.FC = () => {
     <>
       <div className={styles.bgCanvas}><div className={styles.noise} /></div>
       <AnimatePresence mode="wait">
-        {isAdmin ? <Dashboard key="admin" projects={projects} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
+        {isAdmin ? (
+          <Dashboard key="admin" projects={projects} onSave={handleSave} onBack={() => setIsAdmin(false)} />
+        ) : (
           <motion.div key="gallery" className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.header 
               className={styles.header}
