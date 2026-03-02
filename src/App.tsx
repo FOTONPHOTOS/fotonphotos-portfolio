@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, MoreVertical, Edit2, Copy, Check, X } from 'lucide-react';
+import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, MoreVertical, Edit2, Copy, Check, X, Upload } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
@@ -91,6 +91,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   const [newUrl, setNewUrl] = useState('');
   const [newThumb, setNewThumb] = useState('');
   const [newRatio, setNewRatio] = useState('9/16');
+  const [uploading, setUploading] = useState(false);
   const [password, setPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -100,6 +101,32 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   const handleUnlock = () => {
     if (password === ADMIN_PASSWORD) setIsUnlocked(true);
     else alert('Unauthorized access.');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `thumbnails/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('portfolio')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+      setNewThumb(data.publicUrl);
+      alert('Thumbnail Uploaded Successfully');
+    } catch (err: any) {
+      alert('Upload failed: ' + err.message + ' (Make sure you created a public bucket named "portfolio" in Supabase Storage)');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const addProject = () => {
@@ -189,7 +216,14 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
         <div className={styles.inputGroup} style={{ marginBottom: '1rem' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <ImageIcon size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
-            <input type="text" value={newThumb} onChange={(e) => setNewThumb(e.target.value)} placeholder="Custom Thumbnail URL (Optional)" className={styles.input} style={{ paddingLeft: '3rem' }} />
+            <input type="text" value={newThumb} onChange={(e) => setNewThumb(e.target.value)} placeholder="Thumbnail URL" className={styles.input} style={{ paddingLeft: '3rem' }} />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <label className={styles.addBtn} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+              <Upload size={16} />
+              {uploading ? '...' : 'Upload'}
+              <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
+            </label>
           </div>
           <select value={newRatio} onChange={(e) => setNewRatio(e.target.value)} className={styles.input} style={{ flex: '0 0 150px', cursor: 'pointer' }}>
             <option value="9/16">Portrait (9:16)</option>
@@ -318,7 +352,7 @@ const App: React.FC = () => {
     <>
       <div className={styles.bgCanvas}><div className={styles.noise} /></div>
       <AnimatePresence mode="wait">
-        {isAdmin ? <Dashboard projects={projects} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
+        {isAdmin ? <Dashboard key="admin" projects={projects} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
           <motion.div key="gallery" className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.header 
               className={styles.header}
