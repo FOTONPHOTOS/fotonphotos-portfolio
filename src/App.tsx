@@ -232,7 +232,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
       </div>
 
       {viewMode === 'grid' ? (
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
           {localProjects.map((proj, i) => {
             const meta = parseVideoUrl(proj.url);
             const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
@@ -253,7 +253,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ position: 'absolute', top: '35px', right: 0, background: '#111', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden', minWidth: '120px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
                           <button onClick={() => handleEdit(i)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Edit2 size={12} /> Edit</button>
                           <button onClick={() => { navigator.clipboard.writeText(proj.url); alert('Copied'); setEditingMenu(null); }} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Copy size={12} /> Copy Link</button>
-                          <button onClick={() => { if(window.confirm('Delete?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); setEditingMenu(null); }} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ff4444', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
+                          <button onClick={() => { if(window.confirm('Security Check: Are you sure?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); setEditingMenu(null); }} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ff4444', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -288,7 +288,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio || '9/16'}</div>
                     </div>
                     <button onClick={() => handleEdit(i)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><Edit2 size={14} /></button>
-                    <button onClick={() => { if(window.confirm('Delete?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); }} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <button onClick={() => { if(window.confirm('Security Check: Are you sure?')) setLocalProjects(localProjects.filter((_, idx) => idx !== i)); }} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
                 </Reorder.Item>
               );
