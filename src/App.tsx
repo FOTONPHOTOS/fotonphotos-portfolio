@@ -207,10 +207,49 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
         {isAdmin ? <Dashboard key="admin" links={links} onSave={handleSave} onBack={() => setIsAdmin(false)} /> : (
           <motion.div key="gallery" className={styles.container} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <header className={styles.header}>
-              <motion.img src="/logo.png" alt="FOTONPHOTOS" className={styles.logo} onDoubleClick={() => setIsAdmin(true)} whileHover={{ scale: 1.02 }} />
-              <p className={styles.subtitle}>Cinematography & Photography</p>
-            </header>
+            <motion.header 
+              className={styles.header}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1.5 }}
+              style={{ marginTop: '-2rem' }}
+            >
+              <motion.img 
+                src="/logo.png" 
+                alt="FOTONPHOTOS" 
+                className={styles.logo} 
+                onDoubleClick={() => setIsAdmin(true)}
+                initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                animate={{ 
+                  y: 0, 
+                  opacity: 1, 
+                  scale: 1,
+                  filter: [
+                    'drop-shadow(0 0 10px rgba(255,255,255,0.1))',
+                    'drop-shadow(0 0 20px rgba(255,255,255,0.2))',
+                    'drop-shadow(0 0 10px rgba(255,255,255,0.1))'
+                  ]
+                }}
+                transition={{ 
+                  duration: 1.2, 
+                  ease: [0.19, 1, 0.22, 1],
+                  filter: {
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }
+                }}
+                whileHover={{ scale: 1.05 }}
+              />
+              <motion.p 
+                className={styles.subtitle}
+                initial={{ opacity: 0, letterSpacing: '0.4rem' }}
+                animate={{ opacity: 1, letterSpacing: '0.8rem' }}
+                transition={{ duration: 2, delay: 0.5 }}
+              >
+                Cinematography & Photography
+              </motion.p>
+            </motion.header>
             <div className={styles.grid}>
               {links.map((link, index) => <VideoCard key={link + index} url={link} index={index} />)}
             </div>
