@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon } from 'lucide-react';
+import { Play, Trash2, Plus, LogOut, GripVertical, LayoutGrid, List, Image as ImageIcon, MoreVertical, Edit2, Copy, Check, X } from 'lucide-react';
 import styles from './App.module.css';
 import { parseVideoUrl } from './utils/linkUtils';
 
@@ -94,6 +94,8 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   const [password, setPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [activeMenu, setEditingMenu] = useState<number | null>(null);
 
   const handleUnlock = () => {
     if (password === ADMIN_PASSWORD) setIsUnlocked(true);
@@ -111,6 +113,45 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
       setNewUrl('');
       setNewThumb('');
     }
+  };
+
+  const handleEdit = (index: number) => {
+    const proj = localProjects[index];
+    setNewUrl(proj.url);
+    setNewThumb(proj.thumbnail_url || '');
+    setNewRatio(proj.aspect_ratio);
+    setEditingIndex(index);
+    setEditingMenu(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const updateProject = () => {
+    if (editingIndex !== null) {
+      const updated = [...localProjects];
+      updated[editingIndex] = {
+        ...updated[editingIndex],
+        url: newUrl,
+        thumbnail_url: newThumb,
+        aspect_ratio: newRatio
+      };
+      setLocalProjects(updated);
+      setEditingIndex(null);
+      setNewUrl('');
+      setNewThumb('');
+    }
+  };
+
+  const deleteProject = (index: number) => {
+    if (window.confirm('Security Check: Are you sure you want to delete this project?')) {
+      setLocalProjects(localProjects.filter((_, i) => i !== index));
+      setEditingMenu(null);
+    }
+  };
+
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url);
+    alert('Link Copied');
+    setEditingMenu(null);
   };
 
   if (!isUnlocked) {
@@ -131,7 +172,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   return (
     <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1200px' }}>
       <div className={styles.dashboardHeader}>
-        <h2 className={styles.adminTitle}>Admin Portal</h2>
+        <h2 className={styles.adminTitle}>{editingIndex !== null ? 'Edit Project' : 'Admin Portal'}</h2>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className={styles.backBtn}>
             {viewMode === 'grid' ? <List size={16} /> : <LayoutGrid size={16} />}
@@ -156,11 +197,18 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
             <option value="1/1">Square (1:1)</option>
           </select>
         </div>
-        <button onClick={addProject} className={styles.addBtn} style={{ width: '100%', marginTop: '1rem' }}><Plus size={16} style={{ marginRight: '8px' }} /> Add to Portfolio</button>
+        {editingIndex !== null ? (
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button onClick={updateProject} className={styles.addBtn} style={{ flex: 1, background: '#fff', color: '#000' }}><Check size={16} style={{ marginRight: '8px' }} /> Update Project</button>
+            <button onClick={() => { setEditingIndex(null); setNewUrl(''); setNewThumb(''); }} className={styles.backBtn} style={{ flex: 1 }}><X size={16} style={{ marginRight: '8px' }} /> Cancel Edit</button>
+          </div>
+        ) : (
+          <button onClick={addProject} className={styles.addBtn} style={{ width: '100%', marginTop: '1rem' }}><Plus size={16} style={{ marginRight: '8px' }} /> Add to Portfolio</button>
+        )}
       </div>
 
       {viewMode === 'grid' ? (
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
           {localProjects.map((proj, i) => {
             const meta = parseVideoUrl(proj.url);
             const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
@@ -174,8 +222,19 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       <iframe src={meta?.embedUrl} style={{ width: '100%', height: '100%', border: 'none', transform: 'scale(1)', opacity: 0.4 }} scrolling="no" />
                     </div>
                   )}
-                  <div className={styles.platformTag} style={{ top: '5px', left: '5px', right: 'auto' }}>{proj.aspect_ratio || '9/16'}</div>
-                  <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ position: 'absolute', top: '5px', right: '5px', background: '#ff4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', color: 'white', zIndex: 10, cursor: 'pointer' }}><Trash2 size={12} /></button>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 20 }}>
+                    <button onClick={(e) => { e.stopPropagation(); setEditingMenu(activeMenu === i ? null : i); }} style={{ background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px', width: '30px', height: '30px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MoreVertical size={16} /></button>
+                    <AnimatePresence>
+                      {activeMenu === i && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ position: 'absolute', top: '35px', right: 0, background: '#111', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden', minWidth: '120px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                          <button onClick={() => handleEdit(i)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Edit2 size={12} /> Edit</button>
+                          <button onClick={() => copyToClipboard(proj.url)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Copy size={12} /> Copy Link</button>
+                          <button onClick={() => deleteProject(i)} style={{ width: '100%', padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ff4444', textAlign: 'left', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className={styles.platformTag} style={{ top: '10px', left: '10px', right: 'auto' }}>{proj.aspect_ratio || '9/16'}</div>
                 </div>
               </div>
             );
@@ -204,7 +263,8 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
                       <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proj.url}</div>
                       <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>RATIO: {proj.aspect_ratio || '9/16'}</div>
                     </div>
-                    <button onClick={() => setLocalProjects(localProjects.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <button onClick={() => handleEdit(i)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}><Edit2 size={14} /></button>
+                    <button onClick={() => deleteProject(i)} style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
                 </Reorder.Item>
               );
