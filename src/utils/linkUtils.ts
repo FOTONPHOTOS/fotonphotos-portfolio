@@ -66,6 +66,21 @@ export const parseVideoUrl = (url: string): VideoMetadata | null => {
       };
     }
 
+    // Google Drive
+    if (host.includes('drive.google.com')) {
+      // Extract file ID from URL
+      const parts = urlObj.pathname.split('/');
+      const id = parts[parts.indexOf('d') + 1] || urlObj.searchParams.get('id') || '';
+      
+      return {
+        id,
+        platform: 'unknown', // We'll treat it as unknown so it loads the iframe immediately
+        embedUrl: `https://drive.google.com/file/d/${id}/preview`,
+        thumbnailUrl: '',
+        aspectRatio: '16/9'
+      };
+    }
+
     return null;
   } catch (e) {
     console.error('Invalid URL:', url);
