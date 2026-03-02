@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 // Get these from your Supabase Dashboard
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface Project {
   id?: number;
@@ -38,7 +38,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const isDrive = project.url.includes('drive.google.com');
   const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
 
-  // Direct link for Google Drive streaming (avoids the 3-click preview)
   const driveDirectUrl = isDrive ? `https://drive.google.com/uc?export=download&id=${metadata.id}` : '';
 
   const handlePlay = () => {
@@ -58,10 +57,20 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
       onClick={handlePlay}
     >
       <div className={styles.thumbnailWrapper} style={{ paddingBottom: paddingBottom }}>
-        {(!isPlaying && displayThumbnail) ? (
+        {!isPlaying ? (
           <>
             <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-              <img src={displayThumbnail} alt="" className={styles.thumbnail} />
+              {displayThumbnail ? (
+                <img src={displayThumbnail} alt="" className={styles.thumbnail} />
+              ) : (
+                <div className={styles.thumbnail} style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                  background: 'linear-gradient(45deg, #050505, #111)', color: '#fff' 
+                }}>
+                  <Play size={30} fill="white" style={{ opacity: 0.2, marginBottom: '0.5rem' }} />
+                  <span style={{ fontSize: '0.5rem', letterSpacing: '0.2rem', opacity: 0.5 }}>PREVIEW</span>
+                </div>
+              )}
             </motion.div>
             <div className={styles.playOverlay} style={{ opacity: 1 }}>
               <Play size={20} fill="white" color="white" />
@@ -117,6 +126,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!supabase) return alert('Supabase client not initialized');
     try {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -301,13 +311,17 @@ const App: React.FC = () => {
   useEffect(() => { fetchLinks(); }, []);
 
   const fetchLinks = async () => {
-    if (!supabaseUrl || !supabaseKey) return;
+    if (!supabase) {
+      console.warn('Supabase not configured');
+      return;
+    }
     const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
     if (error) console.error('Fetch error:', error.message);
     if (data) setProjects(data);
   };
 
   const handleSave = async (updatedProjects: Project[]) => {
+    if (!supabase) return alert('Supabase client not initialized');
     try {
       const uniqueProjects = Array.from(new Set(updatedProjects.map(p => p.url)))
         .map(url => updatedProjects.find(p => p.url === url)!);
@@ -366,6 +380,14 @@ const App: React.FC = () => {
                 Cinematography & Photography
               </motion.p>
             </motion.header>
+            
+            {projects.length === 0 && (
+              <div style={{ textAlign: 'center', opacity: 0.2, marginTop: '10vh' }}>
+                <p style={{ letterSpacing: '0.5rem', textTransform: 'uppercase' }}>No projects loaded.</p>
+                <p style={{ fontSize: '0.6rem' }}>Check Vercel Environment Variables.</p>
+              </div>
+            )}
+
             <div className={styles.grid}>
               {projects.map((proj, index) => <VideoCard key={proj.url + index} project={proj} index={index} />)}
             </div>
