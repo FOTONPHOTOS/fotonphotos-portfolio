@@ -35,7 +35,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ project, index }) => {
   const [width, height] = ratio.split('/').map(Number);
   const paddingBottom = (height / width) * 100 + '%';
 
-  const isYouTube = metadata.platform === 'youtube';
   const isDrive = project.url.includes('drive.google.com');
   const displayThumbnail = project.thumbnail_url || metadata.thumbnailUrl;
 
@@ -175,6 +174,21 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
     }
   };
 
+  if (!isUnlocked) {
+    return (
+      <div className={styles.dashboardContainer}>
+        <div style={{ textAlign: 'center', paddingTop: '10vh' }}>
+          <h2 className={styles.adminTitle}>Security Required</h2>
+          <div className={styles.inputGroup} style={{ maxWidth: '400px', margin: '2rem auto' }}>
+            <input type="password" placeholder="Password" className={styles.input} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} />
+            <button onClick={handleUnlock} className={styles.addBtn}>Unlock</button>
+          </div>
+          <button onClick={onBack} className={styles.backBtn}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div className={styles.dashboardContainer} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ maxWidth: '1200px' }}>
       <div className={styles.dashboardHeader}>
@@ -218,7 +232,7 @@ const Dashboard: React.FC<{ projects: Project[], onSave: (projects: Project[]) =
       </div>
 
       {viewMode === 'grid' ? (
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
           {localProjects.map((proj, i) => {
             const meta = parseVideoUrl(proj.url);
             const thumb = proj.thumbnail_url || meta?.thumbnailUrl;
